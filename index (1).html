@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiKonsultorio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root[data-theme="light"] {
+  --bg: #F7F5F2; --bg2: #EEEAE4; --surface: #FFFFFF; --surface2: #F2EEE8;
+  --border: #E0D9CF; --text: #1A1714; --text2: #6B6259; --text3: #9E9489;
+  --accent: #2C5F6E; --accent2: #3D7A8A; --accent-light: #E8F2F5;
+  --gold: #B8976A; --shadow: rgba(44,31,20,0.08); --shadow2: rgba(44,31,20,0.15);
+  --nav-bg: rgba(247,245,242,0.92);
+}
+:root[data-theme="dark"] {
+  --bg: #0E1117; --bg2: #141920; --surface: #1A2130; --surface2: #1F2840;
+  --border: #2A3548; --text: #E8EDF5; --text2: #9BACC4; --text3: #5E7090;
+  --accent: #4A9CB5; --accent2: #5BB8D4; --accent-light: #0E2535;
+  --gold: #C4A97A; --shadow: rgba(0,0,0,0.3); --shadow2: rgba(0,0,0,0.5);
+  --nav-bg: rgba(14,17,23,0.95);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; transition: background 0.3s, color 0.3s; }
+h1,h2,h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; }
+
+/* TOP BAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; background: var(--nav-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.topbar-logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--accent); letter-spacing: 0.5px; }
+.topbar-logo span { color: var(--gold); }
+.topbar-encabezado { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--text2); flex: 1; text-align: center; }
+.theme-toggle { width: 44px; height: 24px; background: var(--border); border: none; border-radius: 12px; cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+.theme-toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); top: 3px; left: 3px; transition: transform 0.3s; }
+[data-theme="dark"] .theme-toggle { background: var(--accent-light); }
+[data-theme="dark"] .theme-toggle::after { transform: translateX(20px); background: var(--accent2); }
+
+/* PAGES */
+.page { display: none; animation: fadeIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* BOTTOM NAV */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav-bg); backdrop-filter: blur(14px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; padding: 8px 0 12px; z-index: 200; }
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 16px; color: var(--text3); transition: color 0.2s; background: none; border: none; font-family: 'DM Sans', sans-serif; font-size: 10px; letter-spacing: 0.5px; }
+.nav-item.active { color: var(--accent); }
+.nav-item svg { width: 22px; height: 22px; }
+.nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity 0.2s; }
+.nav-item.active .nav-dot { opacity: 1; }
+
+/* HOME */
+.page-title-bar { padding: 20px 20px 8px; }
+.page-main-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; }
+.page-sub { font-size: 13px; color: var(--text3); margin-top: 2px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 12px; }
+.section-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 500; }
+.section-badge { font-size: 11px; color: var(--text3); background: var(--surface2); padding: 3px 10px; border-radius: 20px; }
+
+/* CITAS */
+.appointments-list { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 80px; }
+.appt-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; transition: all 0.2s; box-shadow: 0 2px 12px var(--shadow); }
+.appt-card.past { opacity: 0.6; }
+.appt-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.appt-service { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 500; }
+.status-badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.5px; }
+.status-agendada { background: #FFF8E6; color: #8A6A00; }
+.status-confirmada { background: #E6F5ED; color: #1B7A42; }
+.status-past { background: var(--surface2); color: var(--text3); }
+[data-theme="dark"] .status-confirmada { background: #0D3320; color: #4DC97C; }
+[data-theme="dark"] .status-agendada { background: #2A2000; color: #C9A34D; }
+.appt-meta { display: flex; flex-direction: column; gap: 5px; }
+.appt-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+.appt-row svg { width: 14px; height: 14px; color: var(--text3); flex-shrink: 0; }
+.appt-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn-small { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.btn-small:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-small.cancel { border-color: #dc3545; color: #dc3545; background: transparent; }
+.btn-small.cancel:hover { background: rgba(220,53,69,0.1); }
+
+/* BOTÓN FIJO AGENDAR */
+.fab-agendar { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); z-index: 150; display: flex; align-items: center; gap: 10px; padding: 14px 28px; background: var(--accent); color: white; border: none; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 20px rgba(44,95,110,0.4); transition: all 0.2s; white-space: nowrap; }
+.fab-agendar:hover { background: var(--accent2); transform: translateX(-50%) translateY(-2px); }
+.fab-agendar svg { width: 18px; height: 18px; }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+.empty-state p { font-size: 14px; }
+
+/* POPUP CANCELAR */
+.popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 600; display: none; align-items: center; justify-content: center; padding: 24px; backdrop-filter: blur(4px); }
+.popup-overlay.open { display: flex; }
+.popup-box { background: var(--surface); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 360px; text-align: center; }
+.popup-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; margin-bottom: 8px; }
+.popup-msg { font-size: 14px; color: var(--text2); margin-bottom: 24px; line-height: 1.5; }
+.popup-actions { display: flex; gap: 10px; }
+.btn-popup-cancel { flex: 1; padding: 13px; border-radius: 12px; border: 1.5px solid #dc3545; background: transparent; color: #dc3545; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; font-weight: 500; }
+.btn-popup-cancel:hover { background: rgba(220,53,69,0.08); }
+.btn-popup-back { flex: 1; padding: 13px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
+
+/* HISTORIAL */
+.history-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.history-header { display: flex; justify-content: space-between; align-items: flex-start; cursor: pointer; }
+.history-service { font-family: 'Cormorant Garamond', serif; font-size: 18px; }
+.history-chevron { transition: transform 0.3s; color: var(--text3); }
+.history-chevron.open { transform: rotate(180deg); }
+.history-extra { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.history-extra.open { display: block; }
+.history-note { font-size: 13px; color: var(--text2); background: var(--bg2); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+
+/* ABOUT / ACERCA DE */
+.about-section { padding: 0 20px 20px; }
+.cv-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 16px; }
+.cv-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--gold)); display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 24px; color: white; flex-shrink: 0; }
+.cv-header { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
+.cv-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; }
+.cv-title { font-size: 13px; color: var(--text3); }
+.cv-spec { font-size: 12px; color: var(--accent); margin-top: 2px; font-weight: 500; }
+.cv-section { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--gold); margin: 14px 0 8px; }
+.cv-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+.cv-row svg { width: 14px; height: 14px; color: var(--text3); flex-shrink: 0; }
+.cv-quote { background: var(--accent-light); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 12px 16px; margin: 12px 0; }
+.cv-quote p { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-style: italic; color: var(--text); }
+.faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+.faq-q { font-family: 'Cormorant Garamond', serif; font-size: 17px; margin-bottom: 6px; }
+.faq-a { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.social-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.social-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 20px; border: 1.5px solid var(--accent); background: var(--accent-light); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 13px; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.social-btn:hover { background: var(--accent); color: white; }
+
+/* CONFIGURACION */
+.config-section { padding: 16px 20px; }
+.config-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; position: relative; }
+.config-card-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; margin-bottom: 12px; color: var(--text2); }
+.profile-info-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.profile-info-row:last-child { border-bottom: none; }
+.profile-info-label { color: var(--text3); }
+.profile-info-value { color: var(--text); font-weight: 500; }
+.btn-edit { position: absolute; top: 14px; right: 14px; padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--accent); background: var(--accent-light); color: var(--accent); font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.file-upload-zone { border: 2px dashed var(--border); border-radius: 14px; padding: 32px 20px; text-align: center; color: var(--text3); cursor: pointer; transition: all 0.2s; }
+.file-upload-zone:hover { border-color: var(--accent); color: var(--accent); }
+.file-upload-zone svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5; }
+.file-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.file-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg2); border-radius: 10px; font-size: 13px; }
+.file-item svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+.section-divider { height: 1px; background: var(--border); margin: 8px 0 20px; }
+
+/* MODAL FORM */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: none; align-items: flex-end; backdrop-filter: blur(4px); }
+.modal-overlay.open { display: flex; }
+.modal-sheet { background: var(--surface); border-radius: 24px 24px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; padding: 0 0 32px; animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+.modal-title-bar { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; }
+.modal-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.modal-body { padding: 20px; }
+.form-step { display: none; }
+.form-step.active { display: block; }
+.step-indicator { display: flex; gap: 6px; margin-bottom: 20px; }
+.step-dot { height: 3px; border-radius: 2px; flex: 1; background: var(--border); transition: background 0.3s; }
+.step-dot.active { background: var(--accent); }
+.step-dot.done { background: var(--gold); }
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 11px; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+.form-input, .form-select { width: 100%; padding: 13px 16px; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; transition: border-color 0.2s, background 0.2s; outline: none; }
+.form-input:focus, .form-select:focus { border-color: var(--accent); background: var(--surface); }
+.form-select { appearance: none; cursor: pointer; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.services-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.service-card { padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg2); cursor: pointer; transition: all 0.2s; text-align: center; }
+.service-card.selected { border-color: var(--accent); background: var(--accent-light); }
+.service-card-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.service-card-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.service-card-price { font-size: 12px; color: var(--gold); margin-top: 4px; font-weight: 500; }
+.collab-list { display: flex; flex-direction: column; gap: 8px; }
+.collab-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg2); cursor: pointer; transition: all 0.2s; }
+.collab-card.selected { border-color: var(--accent); background: var(--accent-light); }
+.collab-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 16px; color: white; flex-shrink: 0; }
+.collab-info { flex: 1; }
+.collab-name { font-size: 14px; font-weight: 500; }
+.collab-spec { font-size: 12px; color: var(--text3); }
+.collab-avail { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.avail-high { background: #E6F5ED; color: #1B7A42; }
+.avail-mid { background: #FFF8E6; color: #8A6A00; }
+[data-theme="dark"] .avail-high { background: #0D3320; color: #4DC97C; }
+[data-theme="dark"] .avail-mid { background: #2A2000; color: #C9A34D; }
+.cal-month-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.cal-month-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; }
+.cal-nav-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-bottom: 4px; }
+.cal-weekday { text-align: center; font-size: 10px; color: var(--text3); padding: 4px; letter-spacing: 0.5px; }
+.cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.cal-day { aspect-ratio: 1; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; color: var(--text); background: transparent; }
+.cal-day:disabled { color: var(--text3); opacity: 0.4; cursor: default; }
+.cal-day.avail-green { background: rgba(27,122,66,0.12); }
+.cal-day.avail-yellow { background: rgba(200,160,0,0.14); }
+.cal-day.avail-orange { background: rgba(200,100,20,0.14); }
+.cal-day.avail-red { background: rgba(200,40,40,0.12); }
+.cal-day.selected-day { background: var(--accent) !important; color: white !important; font-weight: 600; }
+.cal-legend { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.cal-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); }
+.cal-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+.time-slots { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+.time-slot { padding: 10px; text-align: center; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg2); cursor: pointer; font-size: 13px; transition: all 0.15s; color: var(--text); }
+.time-slot.selected { background: var(--accent); color: white; border-color: var(--accent); }
+.time-slot:disabled { opacity: 0.3; cursor: default; }
+.form-nav { display: flex; gap: 10px; margin-top: 20px; }
+.btn-back { flex: 0.6; padding: 14px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.btn-next { flex: 1; padding: 14px; border-radius: 12px; border: none; background: var(--accent); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+.btn-next:hover { background: var(--accent2); }
+.btn-back:hover { background: var(--bg2); }
+.success-state { text-align: center; padding: 32px 20px; }
+.success-icon { width: 72px; height: 72px; background: var(--accent); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px rgba(44,95,110,0.3); }
+.success-icon svg { color: white; width: 32px; height: 32px; }
+.success-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; margin-bottom: 8px; }
+.success-sub { font-size: 14px; color: var(--text2); margin-bottom: 20px; }
+.confirm-details { background: var(--bg2); border-radius: 14px; padding: 16px; margin: 16px 0; text-align: left; }
+.confirm-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.confirm-row:last-child { border-bottom: none; }
+.confirm-label { color: var(--text3); }
+.confirm-value { color: var(--text); font-weight: 500; }
+.recomendaciones-box { background: var(--accent-light); border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 13px; color: var(--text2); line-height: 1.6; }
+.recomendaciones-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: var(--accent); margin-bottom: 8px; }
+
+/* CALENDAR PAGE */
+.cal-page { padding: 16px 20px; }
+.cal-filter-bar { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+.filter-chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+.filter-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+.cal-big { background: var(--surface); border-radius: 20px; padding: 16px; border: 1px solid var(--border); box-shadow: 0 2px 16px var(--shadow); }
+.cal-big-month { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.cal-big-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; }
+.cal-big-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; margin-top: 8px; }
+.cal-big-day { aspect-ratio: 1; border-radius: 12px; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; color: var(--text); background: transparent; }
+.cal-big-day.avail-green { background: rgba(27,122,66,0.12); }
+.cal-big-day.avail-yellow { background: rgba(200,160,0,0.13); }
+.cal-big-day.avail-orange { background: rgba(200,100,20,0.13); }
+.cal-big-day.avail-red { background: rgba(200,40,40,0.1); }
+.cal-big-day.selected-day { background: var(--accent) !important; color: white !important; }
+.cal-big-day.today { border: 1.5px solid var(--accent); }
+.cal-big-day:disabled { opacity: 0.3; cursor: default; }
+.day-slots-panel { background: var(--surface); border-radius: 16px; padding: 16px; margin-top: 14px; border: 1px solid var(--border); }
+.day-slots-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; margin-bottom: 12px; }
+.slot-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg2); margin-bottom: 7px; }
+.slot-time { font-size: 14px; font-weight: 500; }
+.slot-status { font-size: 12px; padding: 3px 10px; border-radius: 20px; }
+.slot-available { background: rgba(27,122,66,0.15); color: #1B7A42; }
+.slot-taken { background: var(--surface2); color: var(--text3); }
+[data-theme="dark"] .slot-available { background: #0D3320; color: #4DC97C; }
+
+/* TOAST */
+.toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--accent); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- AUTH PAGE -->
+<div id="auth-page" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;overflow-y:auto;">
+  <div style="width:100%;max-width:400px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--accent);">MiKon<span style="color:var(--gold);">sultorio</span></div>
+      <div style="font-size:13px;color:var(--text3);margin-top:6px;">Tu clínica en un solo lugar</div>
+    </div>
+    <div style="display:flex;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:24px;">
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;">Ingresar</button>
+      <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Registrarse</button>
+    </div>
+
+    <!-- INGRESAR -->
+    <div id="auth-login">
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" class="form-input" id="login-email" placeholder="tu@correo.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input type="password" class="form-input" id="login-password" placeholder="••••••••">
+      </div>
+      <button onclick="handleLogin()" class="btn-next" style="width:100%;margin-top:8px;">Ingresar</button>
+      <button onclick="showForgot()" style="width:100%;margin-top:12px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Olvidé mi contraseña</button>
+    </div>
+
+    <!-- OLVIDÉ CONTRASEÑA -->
+    <div id="auth-forgot" style="display:none;">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" class="form-input" id="forgot-email" placeholder="tu@correo.com">
+      </div>
+      <button onclick="handleForgotPassword()" class="btn-next" style="width:100%;margin-top:8px;">Enviar enlace</button>
+      <button onclick="showForgot(false)" style="width:100%;margin-top:12px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">← Regresar</button>
+    </div>
+
+    <!-- REGISTRARSE -->
+    <div id="auth-register" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Nombre de usuario</label>
+        <input type="text" class="form-input" id="reg-usuario" placeholder="@usuario" oninput="autoAt(this)">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" id="reg-nombre" placeholder="Tu nombre">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Apellido paterno</label>
+          <input type="text" class="form-input" id="reg-apellido-paterno" placeholder="Apellido">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Apellido materno</label>
+        <input type="text" class="form-input" id="reg-apellido-materno" placeholder="Apellido materno">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Fecha de nacimiento</label>
+          <input type="date" class="form-input" id="reg-nacimiento">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sexo</label>
+          <select class="form-select" id="reg-sexo">
+            <option value="">Seleccionar</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input type="tel" class="form-input" id="reg-telefono" placeholder="55 0000 0000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" class="form-input" id="reg-email" placeholder="tu@correo.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input type="password" class="form-input" id="reg-password" placeholder="Mínimo 6 caracteres alfanuméricos">
+      </div>
+      <button onclick="handleRegister()" class="btn-next" style="width:100%;margin-top:8px;">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">MiKon<span>sultorio</span></div>
+  <div class="topbar-encabezado" id="topbar-encabezado"></div>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar modo"></button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- POPUP CANCELAR -->
+<div class="popup-overlay" id="popup-cancelar">
+  <div class="popup-box">
+    <div class="popup-title">Cancelar cita</div>
+    <p class="popup-msg" id="popup-msg"></p>
+    <div class="popup-actions">
+      <button class="btn-popup-cancel" onclick="confirmarCancelacion()">Sí, cancelar</button>
+      <button class="btn-popup-back" onclick="cerrarPopup()">No, regresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- INICIO -->
+<div class="page active" id="page-home">
+  <div class="page-title-bar">
+    <h1 class="page-main-title">Mis Citas</h1>
+  </div>
+  <div class="appointments-list" id="appointments-container"></div>
+  <button class="fab-agendar" onclick="openModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Agendar cita
+  </button>
+</div>
+
+<!-- HISTORIAL -->
+<div class="page" id="page-historial">
+  <div class="page-title-bar">
+    <h1 class="page-main-title">Historial</h1>
+    <div class="page-sub">Tus citas anteriores</div>
+  </div>
+  <div style="padding:0 20px;" id="historial-container"></div>
+</div>
+
+<!-- ACERCA DE -->
+<div class="page" id="page-about">
+  <div class="page-title-bar">
+    <h1 class="page-main-title">Acerca del doctor</h1>
+  </div>
+  <div class="about-section">
+    <div class="cv-card">
+      <div class="cv-header">
+        <div class="cv-avatar" id="cv-avatar">MG</div>
+        <div>
+          <div class="cv-name" id="cv-nombre">Dr. Miguel García</div>
+          <div class="cv-title" id="cv-licenciatura">Médico Especialista</div>
+          <div class="cv-spec" id="cv-especialidad">Dermatología Estética</div>
+        </div>
+      </div>
+      <div class="cv-quote"><p id="cv-frase">"La belleza más auténtica viene del bienestar interior reflejado al exterior."</p></div>
+      <div class="cv-section">Información de contacto</div>
+      <div class="cv-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.1 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg> <span id="cv-telefono">+52 55 0000 0000</span></div>
+      <div class="cv-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="cv-horario">Lun–Vie 10:00–14:00 y 16:00–18:00</span></div>
+    </div>
+
+    <div style="margin-bottom:8px;"><h2 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:12px;">Preguntas frecuentes</h2>
+      <div id="faq-container">
+        <div class="faq-item"><div class="faq-q">¿Necesito cita previa?</div><div class="faq-a">Sí, todas las consultas son con cita previa para garantizar la atención personalizada.</div></div>
+        <div class="faq-item"><div class="faq-q">¿Cuáles son las formas de pago?</div><div class="faq-a">Aceptamos efectivo, tarjeta de crédito y débito, y transferencia bancaria.</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;"><h2 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:12px;">Redes sociales</h2>
+      <div class="social-btns" id="social-btns">
+        <a href="#" class="social-btn" id="btn-linkedin">LinkedIn</a>
+        <a href="#" class="social-btn" id="btn-instagram">Instagram</a>
+        <a href="#" class="social-btn" id="btn-facebook">Facebook</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIGURACIÓN -->
+<div class="page" id="page-config">
+  <div class="page-title-bar">
+    <h1 class="page-main-title">Configuración</h1>
+  </div>
+  <div class="config-section">
+
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:12px;">Mi perfil</h2>
+    <div class="config-card">
+      <button class="btn-edit" onclick="abrirEditarPerfil()">Editar</button>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div id="perfil-foto" style="width:56px;height:56px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:22px;color:white;flex-shrink:0;" onclick="document.getElementById('foto-input').click()" title="Cambiar foto">?</div>
+        <input type="file" id="foto-input" style="display:none" accept="image/*">
+        <div>
+          <div style="font-size:16px;font-weight:500;" id="perfil-nombre">—</div>
+          <div style="font-size:13px;color:var(--text3);" id="perfil-usuario">—</div>
+        </div>
+      </div>
+      <div class="profile-info-row"><span class="profile-info-label">Edad</span><span class="profile-info-value" id="perfil-edad">—</span></div>
+      <div class="profile-info-row"><span class="profile-info-label">Correo</span><span class="profile-info-value" id="perfil-correo">—</span></div>
+      <div class="profile-info-row"><span class="profile-info-label">Teléfono</span><span class="profile-info-value" id="perfil-telefono">—</span></div>
+    </div>
+
+    <div class="section-divider"></div>
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:12px;">Contraseña</h2>
+    <button onclick="abrirCambiarPassword()" class="btn-next" style="width:100%;">Cambiar contraseña</button>
+  </div>
+</div>
+
+<!-- POPUP EDITAR PERFIL -->
+<div class="popup-overlay" id="popup-editar-perfil">
+  <div class="popup-box" style="max-width:420px;text-align:left;max-height:85vh;overflow-y:auto;">
+    <div class="popup-title" style="margin-bottom:16px;">Editar perfil</div>
+    <div class="form-group"><label class="form-label">Nombre de usuario</label><input type="text" class="form-input" id="edit-usuario" oninput="autoAt(this)"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" id="edit-nombre"></div>
+      <div class="form-group"><label class="form-label">Apellido paterno</label><input type="text" class="form-input" id="edit-apaterno"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Apellido materno</label><input type="text" class="form-input" id="edit-amaterno"></div>
+    <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" class="form-input" id="edit-telefono"></div>
+    <div class="form-group"><label class="form-label">Correo electrónico</label><input type="email" class="form-input" id="edit-correo"></div>
+    <div class="popup-actions" style="margin-top:8px;">
+      <button class="btn-popup-back" onclick="cerrarPopupPerfil()">Cancelar</button>
+      <button class="btn-next" style="flex:1;" onclick="guardarPerfil()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP CAMBIAR CONTRASEÑA -->
+<div class="popup-overlay" id="popup-password">
+  <div class="popup-box">
+    <div class="popup-title">Cambiar contraseña</div>
+    <p class="popup-msg">Te enviaremos un enlace a tu correo para que puedas cambiar tu contraseña.</p>
+    <div class="form-group" style="text-align:left;">
+      <label class="form-label">Correo electrónico</label>
+      <input type="email" class="form-input" id="pwd-email" placeholder="tu@correo.com">
+    </div>
+    <div class="popup-actions">
+      <button class="btn-popup-back" onclick="cerrarPopupPassword()">Cancelar</button>
+      <button class="btn-next" style="flex:1;" onclick="enviarCambioPassword()">Enviar enlace</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('home', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Inicio<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" onclick="showPage('historial', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Historial<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" onclick="showPage('about', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    Doctor<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" onclick="showPage('config', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Ajustes<div class="nav-dot"></div>
+  </button>
+</nav>
+
+<!-- MODAL AGENDAR CITA -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title-bar">
+      <h2 class="modal-title" id="modal-title">Nueva cita</h2>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="step-indicator">
+        <div class="step-dot active" id="sdot-1"></div>
+        <div class="step-dot" id="sdot-2"></div>
+        <div class="step-dot" id="sdot-3"></div>
+      </div>
+
+      <!-- PASO 1: Servicio y doctor -->
+      <div class="form-step active" id="step-1">
+        <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:4px;">Servicio</h3>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Paso 1 de 3</p>
+        <div class="form-group">
+          <label class="form-label">Selecciona el servicio</label>
+          <div class="services-grid">
+            <div class="service-card" onclick="selectService(this,'Consulta General',45,'$600')"><div class="service-card-name">Consulta General</div><div class="service-card-meta">45 min</div><div class="service-card-price">$600</div></div>
+            <div class="service-card" onclick="selectService(this,'Aplicación Botox',30,'$3,500')"><div class="service-card-name">Aplicación Botox</div><div class="service-card-meta">30 min</div><div class="service-card-price">$3,500</div></div>
+            <div class="service-card" onclick="selectService(this,'Plan Nutricional',60,'$1,200')"><div class="service-card-name">Plan Nutricional</div><div class="service-card-meta">60 min</div><div class="service-card-price">$1,200</div></div>
+            <div class="service-card" onclick="selectService(this,'Limpieza Facial',75,'$900')"><div class="service-card-name">Limpieza Facial</div><div class="service-card-meta">75 min</div><div class="service-card-price">$900</div></div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Doctor</label>
+          <div class="collab-list">
+            <div class="collab-card" onclick="selectCollab(this,'Dr. Miguel García','Dermatología Estética')"><div class="collab-avatar">MG</div><div class="collab-info"><div class="collab-name">Dr. Miguel García</div><div class="collab-spec">Dermatología Estética</div></div><span class="collab-avail avail-high">Alta disp.</span></div>
+            <div class="collab-card" onclick="selectCollab(this,'Dra. Ana López','Nutrición y Bienestar')"><div class="collab-avatar" style="background:linear-gradient(135deg,#7A4E8A,#B8976A)">AL</div><div class="collab-info"><div class="collab-name">Dra. Ana López</div><div class="collab-spec">Nutrición y Bienestar</div></div><span class="collab-avail avail-mid">Disponible</span></div>
+          </div>
+        </div>
+        <div class="form-nav"><button class="btn-next" style="width:100%;" onclick="goStep(2)">Continuar →</button></div>
+      </div>
+
+      <!-- PASO 2: Fecha y hora -->
+      <div class="form-step" id="step-2">
+        <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:4px;">Fecha y hora</h3>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Paso 2 de 3</p>
+        <div class="cal-month-header">
+          <button class="cal-nav-btn" onclick="changeFormCal(-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div class="cal-month-title" id="form-cal-title"></div>
+          <button class="cal-nav-btn" onclick="changeFormCal(1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+        </div>
+        <div class="cal-weekdays"><div class="cal-weekday">D</div><div class="cal-weekday">L</div><div class="cal-weekday">M</div><div class="cal-weekday">M</div><div class="cal-weekday">J</div><div class="cal-weekday">V</div><div class="cal-weekday">S</div></div>
+        <div class="cal-days" id="form-cal-days"></div>
+        <div class="cal-legend" style="margin:10px 0;">
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:rgba(27,122,66,0.4)"></div>Muy disponible</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:rgba(200,160,0,0.5)"></div>Regular</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:rgba(200,100,20,0.5)"></div>Poca disp.</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:rgba(200,40,40,0.4)"></div>Sin disp.</div>
+        </div>
+        <div id="time-section" style="display:none">
+          <label class="form-label" style="margin-bottom:8px;display:block;">Horarios disponibles</label>
+          <div class="time-slots" id="time-slots-grid"></div>
+        </div>
+        <div class="form-nav"><button class="btn-back" onclick="goStep(1)">← Atrás</button><button class="btn-next" onclick="goStep(3)">Confirmar →</button></div>
+      </div>
+
+      <!-- PASO 3: Resumen y confirmar -->
+      <div class="form-step" id="step-3">
+        <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:4px;">Resumen</h3>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Paso 3 de 3</p>
+        <div class="confirm-details" id="confirm-details"></div>
+        <div id="motivo-group" style="margin:16px 0;">
+          <label class="form-label">Motivo de la consulta</label>
+          <textarea class="form-input" id="f-motivo" placeholder="Describe brevemente el motivo..." style="height:80px;resize:none;"></textarea>
+        </div>
+        <div id="recomendaciones-box" style="display:none;" class="recomendaciones-box">
+          <div class="recomendaciones-title">Recomendaciones del doctor</div>
+          <div id="recomendaciones-texto"></div>
+        </div>
+        <div class="form-nav">
+          <button class="btn-back" onclick="goStep(2)">← Atrás</button>
+          <button class="btn-next" onclick="finishBooking()">Agendar cita</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== SUPABASE ==========
+const SUPABASE_URL = 'https://vcmwquctkynynhmgbihf.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_N3l22C1qFFUVXdLDBrVfQg_93dK80AU'
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ========== AUTH ==========
+function autoAt(input) {
+  let v = input.value.replace(/@/g, '')
+  input.value = v ? '@' + v : ''
+}
+
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim()
+  const password = document.getElementById('login-password').value
+  if (!email || !password) { showToast('Ingresa correo y contraseña'); return }
+  const { error } = await db.auth.signInWithPassword({ email, password })
+  if (error) { showToast('Error: ' + error.message); return }
+  showToast('¡Bienvenido!')
+  document.getElementById('auth-page').style.display = 'none'
+}
+
+async function handleRegister() {
+  const usuario  = document.getElementById('reg-usuario').value.trim()
+  const nombre   = document.getElementById('reg-nombre').value.trim()
+  const aPaterno = document.getElementById('reg-apellido-paterno').value.trim()
+  const aMaterno = document.getElementById('reg-apellido-materno').value.trim()
+  const nacimiento = document.getElementById('reg-nacimiento').value
+  const sexo     = document.getElementById('reg-sexo').value
+  const telefono = document.getElementById('reg-telefono').value.trim()
+  const email    = document.getElementById('reg-email').value.trim()
+  const password = document.getElementById('reg-password').value
+  if (!usuario || !nombre || !aPaterno || !email || !password || !sexo) { showToast('Completa todos los campos obligatorios'); return }
+  if (password.length < 6) { showToast('La contraseña debe tener mínimo 6 caracteres'); return }
+  const { error } = await db.auth.signUp({
+    email, password,
+    options: { data: { tipo:'paciente', nombre, apellido_paterno:aPaterno, apellido_materno:aMaterno, nombre_usuario:usuario, fecha_nacimiento:nacimiento, sexo, telefono } }
+  })
+  if (error) { showToast('Error: ' + error.message); return }
+  showToast('✅ Cuenta creada, revisa tu correo para confirmar')
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim()
+  if (!email) { showToast('Ingresa tu correo'); return }
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: window.location.href })
+  if (error) { showToast('Error: ' + error.message); return }
+  showToast('📧 Revisa tu correo para restablecer tu contraseña')
+}
+
+function showForgot(show = true) {
+  document.getElementById('auth-login').style.display = show ? 'none' : 'block'
+  document.getElementById('auth-forgot').style.display = show ? 'block' : 'none'
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-login').style.display    = tab === 'login'    ? 'block' : 'none'
+  document.getElementById('auth-register').style.display = tab === 'register' ? 'block' : 'none'
+  document.getElementById('auth-forgot').style.display   = 'none'
+  document.getElementById('tab-login').style.background    = tab === 'login'    ? 'var(--surface)' : 'transparent'
+  document.getElementById('tab-register').style.background = tab === 'register' ? 'var(--surface)' : 'transparent'
+  document.getElementById('tab-login').style.color    = tab === 'login'    ? 'var(--accent)' : 'var(--text3)'
+  document.getElementById('tab-register').style.color = tab === 'register' ? 'var(--accent)' : 'var(--text3)'
+}
+
+db.auth.onAuthStateChange((event, session) => {
+  const authPage = document.getElementById('auth-page')
+  if (!authPage) return
+  authPage.style.display = session ? 'none' : 'flex'
+})
+
+// ========== STATE ==========
+let currentPage = 'home'
+let darkMode = false
+let sexoPaciente = ''
+let cancelandoId = null
+let archivos = []
+let appointments = [
+  { id:1, service:'Consulta General', collaborator:'Dr. Miguel García', date:'2026-04-15', time:'10:00', status:'confirmada', past:false },
+  { id:2, service:'Limpieza Facial',  collaborator:'Dr. Miguel García', date:'2026-02-20', time:'11:30', status:'completada', past:true }
+]
+let formData = { name:'', phone:'', email:'', service:'', serviceDuration:'', servicePrice:'', collaborator:'', date:'', time:'', motivo:'' }
+let currentFormCalDate = new Date()
+let currentPageCalDate = new Date()
+let calFilter = 'all'
+let editingId = null
+
+const availData = {
+  garcia: { '2026-04-07':'green','2026-04-08':'green','2026-04-09':'yellow','2026-04-10':'red','2026-04-11':'green','2026-04-14':'orange','2026-04-15':'green','2026-04-16':'yellow','2026-04-17':'green','2026-04-22':'green','2026-04-23':'orange','2026-04-24':'green','2026-04-25':'yellow','2026-04-28':'green','2026-04-29':'green' },
+  lopez:  { '2026-04-07':'yellow','2026-04-08':'orange','2026-04-09':'green','2026-04-10':'green','2026-04-11':'red','2026-04-14':'green','2026-04-15':'yellow','2026-04-16':'green','2026-04-17':'orange','2026-04-22':'green','2026-04-23':'green','2026-04-24':'yellow','2026-04-25':'green','2026-04-28':'orange','2026-04-29':'green' }
+}
+const timeSlots = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','16:00','16:30','17:00','17:30','18:00']
+
+// ========== INIT ==========
+window.onload = () => {
+  renderAppointments()
+  renderHistorial()
+  renderFormCal()
+}
+
+// ========== THEME ==========
+function toggleTheme() {
+  darkMode = !darkMode
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+}
+
+// ========== NAV ==========
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'))
+  document.getElementById('page-' + name).classList.add('active')
+  btn.classList.add('active')
+  currentPage = name
+}
+
+// ========== TOAST ==========
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  setTimeout(() => t.classList.remove('show'), 3000)
+}
+
+// ========== CITAS ==========
+function renderAppointments() {
+  const container = document.getElementById('appointments-container')
+  const upcoming = appointments.filter(a => !a.past).sort((a,b) => new Date(a.date+' '+a.time) - new Date(b.date+' '+b.time))
+  if (upcoming.length === 0) {
+    container.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>No tienes citas próximas</p></div>`
+    return
+  }
+  container.innerHTML = upcoming.map(a => `
+    <div class="appt-card">
+      <div class="appt-header">
+        <div class="appt-service">${a.service}</div>
+        <span class="status-badge status-${a.status}">${a.status}</span>
+      </div>
+      <div class="appt-meta">
+        <div class="appt-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>${a.collaborator}</div>
+        <div class="appt-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${formatDate(a.date)} · ${a.time}</div>
+      </div>
+      <div class="appt-actions">
+        <button class="btn-small" onclick="editAppointment(${a.id})">Modificar</button>
+        <button class="btn-small cancel" onclick="solicitarCancelacion(${a.id})">Cancelar</button>
+      </div>
+    </div>`).join('')
+}
+
+function solicitarCancelacion(id) {
+  const a = appointments.find(x => x.id === id)
+  if (!a) return
+  cancelandoId = id
+  const genero = sexoPaciente === 'femenino' ? 'a' : sexoPaciente === 'masculino' ? 'o' : '@'
+  document.getElementById('popup-msg').textContent = `¿Estás segur${genero} de cancelar la cita: ${a.service}, ${formatDate(a.date)} a las ${a.time}?`
+  document.getElementById('popup-cancelar').classList.add('open')
+}
+
+function confirmarCancelacion() {
+  appointments = appointments.filter(a => a.id !== cancelandoId)
+  cancelandoId = null
+  cerrarPopup()
+  renderAppointments()
+  showToast('Cita cancelada')
+}
+
+function cerrarPopup() {
+  document.getElementById('popup-cancelar').classList.remove('open')
+}
+
+function editAppointment(id) {
+  editingId = id
+  const a = appointments.find(x => x.id === id)
+  if (!a) return
+  formData.service = a.service
+  formData.collaborator = a.collaborator
+  formData.date = a.date
+  formData.time = a.time
+  document.getElementById('modal-title').textContent = 'Modificar cita'
+  openModal(true)
+}
+
+// ========== HISTORIAL ==========
+function renderHistorial() {
+  const container = document.getElementById('historial-container')
+  const past = appointments.filter(a => a.past)
+  if (past.length === 0) {
+    container.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><p>Sin citas anteriores</p></div>`
+    return
+  }
+  container.innerHTML = past.map(a => `
+    <div class="history-card">
+      <div class="history-header" onclick="toggleHistorial(this)">
+        <div>
+          <div class="history-service">${a.service}</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px;">${formatDate(a.date)} · ${a.time} · ${a.collaborator}</div>
+          <span class="status-badge status-past" style="margin-top:6px;display:inline-block;">${a.status}</span>
+        </div>
+        <svg class="history-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="history-extra">
+        <div class="history-note">${a.notas || 'Sin notas del doctor.'}</div>
+        <div style="font-size:13px;color:var(--text2);">📍 ${a.direccion || 'Av. Insurgentes Sur 1234, Del Valle, CDMX'}</div>
+      </div>
+    </div>`).join('')
+}
+
+function toggleHistorial(header) {
+  const extra = header.nextElementSibling
+  const chevron = header.querySelector('.history-chevron')
+  extra.classList.toggle('open')
+  chevron.classList.toggle('open')
+}
+
+// ========== MODAL ==========
+function openModal(editMode = false) {
+  document.getElementById('modal-overlay').classList.add('open')
+  if (!editMode) resetFormSelections()
+  goStep(2, true)
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open')
+  editingId = null
+  document.getElementById('modal-title').textContent = 'Nueva cita'
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal()
+}
+function resetFormSelections() {
+  document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'))
+  document.querySelectorAll('.collab-card').forEach(c => c.classList.remove('selected'))
+  formData = { name:'', phone:'', email:'', service:'', serviceDuration:'', servicePrice:'', collaborator:'', date:'', time:'', motivo:'' }
+  currentFormCalDate = new Date()
+  renderFormCal()
+}
+
+// ========== PASOS ==========
+function goStep(n, silent = false) {
+  if (!silent && n > 1) {
+    if (n === 2 && !validateStep1()) return
+    if (n === 3 && !validateStep2()) return
+  }
+  document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'))
+  document.getElementById('step-' + n).classList.add('active')
+  for (let i = 1; i <= 3; i++) {
+    const d = document.getElementById('sdot-' + i)
+    d.classList.remove('active', 'done')
+    if (i === n) d.classList.add('active')
+    else if (i < n) d.classList.add('done')
+  }
+  if (n === 3) buildConfirmDetails()
+}
+
+function validateStep1() {
+  const name = document.getElementById('f-name').value.trim()
+  const phone = document.getElementById('f-phone').value.trim()
+  const email = document.getElementById('f-email').value.trim()
+  if (!name) { showToast('Ingresa tu nombre'); return false }
+  if (!phone) { showToast('Ingresa tu teléfono'); return false }
+  if (!email) { showToast('Ingresa tu correo'); return false }
+  formData.name = name; formData.phone = phone; formData.email = email
+  return true
+}
+function validateStep2() {
+  if (!formData.service) { showToast('Selecciona un servicio'); return false }
+  if (!formData.collaborator) { showToast('Selecciona un doctor'); return false }
+  return true
+}
+function validateStep3() {
+  if (!formData.date) { showToast('Selecciona una fecha'); return false }
+  if (!formData.time) { showToast('Selecciona un horario'); return false }
+  return true
+}
+
+function selectService(el, name, dur, price) {
+  document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'))
+  el.classList.add('selected')
+  formData.service = name; formData.serviceDuration = dur; formData.servicePrice = price
+}
+function selectCollab(el, name, spec) {
+  document.querySelectorAll('.collab-card').forEach(c => c.classList.remove('selected'))
+  el.classList.add('selected')
+  formData.collaborator = name
+}
+
+// ========== CALENDARIO FORM ==========
+function renderFormCal() {
+  const d = currentFormCalDate
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  document.getElementById('form-cal-title').textContent = months[d.getMonth()] + ' ' + d.getFullYear()
+  const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).getDay()
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate()
+  const today = new Date()
+  let html = ''
+  for (let i = 0; i < firstDay; i++) html += '<button class="cal-day" disabled></button>'
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+    const avail = getAvailability(dateStr)
+    const isPast = new Date(dateStr) < new Date(today.toDateString())
+    const isSel = formData.date === dateStr
+    html += `<button class="cal-day ${isSel ? 'selected-day' : (isPast ? '' : 'avail-'+avail)}" ${isPast ? 'disabled' : ''} onclick="selectFormDate('${dateStr}')">${day}</button>`
+  }
+  document.getElementById('form-cal-days').innerHTML = html
+}
+function changeFormCal(dir) {
+  currentFormCalDate = new Date(currentFormCalDate.getFullYear(), currentFormCalDate.getMonth()+dir, 1)
+  renderFormCal()
+}
+function getAvailability(dateStr) {
+  const rank = { green:0, yellow:1, orange:2, red:3 }
+  const g = availData.garcia[dateStr] || 'green'
+  const l = availData.lopez[dateStr] || 'green'
+  return Object.keys(rank).find(r => rank[r] === Math.round((rank[g]+rank[l])/2)) || 'green'
+}
+function selectFormDate(dateStr) {
+  formData.date = dateStr; formData.time = ''
+  renderFormCal()
+  renderTimeSlots(dateStr)
+  document.getElementById('time-section').style.display = 'block'
+}
+function renderTimeSlots(dateStr) {
+  const taken = appointments.filter(a => a.date === dateStr && a.id !== editingId).map(a => a.time)
+  document.getElementById('time-slots-grid').innerHTML = timeSlots.map(t => {
+    const isTaken = taken.includes(t)
+    const isSel = formData.time === t
+    return `<button class="time-slot ${isSel ? 'selected' : ''}" ${isTaken ? 'disabled' : ''} onclick="selectTime('${t}')">${t}</button>`
+  }).join('')
+}
+function selectTime(t) {
+  formData.time = t; renderTimeSlots(formData.date)
+}
+
+// ========== CONFIRMAR ==========
+function buildConfirmDetails() {
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const d = new Date(formData.date+'T12:00:00')
+  document.getElementById('confirm-details').innerHTML = `
+    <div class="confirm-row"><span class="confirm-label">Servicio</span><span class="confirm-value">${formData.service}</span></div>
+    <div class="confirm-row"><span class="confirm-label">Doctor</span><span class="confirm-value">${formData.collaborator}</span></div>
+    <div class="confirm-row"><span class="confirm-label">Fecha</span><span class="confirm-value">${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}</span></div>
+    <div class="confirm-row"><span class="confirm-label">Hora</span><span class="confirm-value">${formData.time}</span></div>`
+  const rec = 'Llegue 10 minutos antes de su cita. Traiga identificación oficial y, en caso de tener estudios previos, por favor llévelos consigo.'
+  if (rec) {
+    document.getElementById('recomendaciones-box').style.display = 'block'
+    document.getElementById('recomendaciones-texto').textContent = rec
+  }
+}
+
+function finishBooking() {
+  formData.motivo = document.getElementById('f-motivo').value.trim()  if (editingId) {
+    const idx = appointments.findIndex(a => a.id === editingId)
+    if (idx >= 0) appointments[idx] = { ...appointments[idx], service:formData.service, collaborator:formData.collaborator, date:formData.date, time:formData.time }
+    showToast('✅ Cita modificada')
+  } else {
+    appointments.push({ id:Date.now(), service:formData.service, collaborator:formData.collaborator, date:formData.date, time:formData.time, status:'agendada', past:false, motivo:formData.motivo })
+    showToast('✅ ¡Cita agendada!')
+  }
+  closeModal()
+  renderAppointments()
+}
+
+// ========== PERFIL CONFIG ==========
+function abrirEditarPerfil() {
+  document.getElementById('edit-usuario').value = document.getElementById('perfil-usuario').textContent
+  document.getElementById('edit-nombre').value = document.getElementById('perfil-nombre').textContent === '—' ? '' : document.getElementById('perfil-nombre').textContent
+  document.getElementById('edit-telefono').value = document.getElementById('perfil-telefono').textContent === '—' ? '' : document.getElementById('perfil-telefono').textContent
+  document.getElementById('edit-correo').value = document.getElementById('perfil-correo').textContent === '—' ? '' : document.getElementById('perfil-correo').textContent
+  document.getElementById('popup-editar-perfil').classList.add('open')
+}
+function cerrarPopupPerfil() {
+  document.getElementById('popup-editar-perfil').classList.remove('open')
+}
+function guardarPerfil() {
+  const nombre = document.getElementById('edit-nombre').value.trim()
+  const usuario = document.getElementById('edit-usuario').value.trim()
+  const telefono = document.getElementById('edit-telefono').value.trim()
+  if (!nombre) { showToast('Ingresa tu nombre'); return }
+  document.getElementById('perfil-nombre').textContent = nombre
+  document.getElementById('perfil-usuario').textContent = usuario
+  document.getElementById('perfil-telefono').textContent = telefono || '—'
+  cerrarPopupPerfil()
+  showToast('✅ Perfil actualizado')
+}
+function abrirCambiarPassword() {
+  const correo = document.getElementById('perfil-correo').textContent
+  document.getElementById('pwd-email').value = correo === '—' ? '' : correo
+  document.getElementById('popup-password').classList.add('open')
+}
+function cerrarPopupPassword() {
+  document.getElementById('popup-password').classList.remove('open')
+}
+async function enviarCambioPassword() {
+  const email = document.getElementById('pwd-email').value.trim()
+  if (!email) { showToast('Ingresa tu correo'); return }
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: window.location.href })
+  if (error) { showToast('Error: ' + error.message); return }
+  showToast('📧 Enlace enviado, revisa tu correo')
+  cerrarPopupPassword()
+}
+function agregarArchivo(input) {
+  const file = input.files[0]
+  if (!file) return
+  archivos.push(file.name)
+  const list = document.getElementById('file-list')
+  const item = document.createElement('div')
+  item.className = 'file-item'
+  item.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>${file.name}</span>`
+  list.appendChild(item)
+  input.value = ''
+  showToast('Archivo agregado')
+}
+
+function cambiarFoto(input) {
+  const file = input.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const avatar = document.getElementById('edit-avatar')
+    avatar.style.backgroundImage = `url(${e.target.result})`
+    avatar.style.backgroundSize = 'cover'
+    avatar.textContent = ''
+  }
+  reader.readAsDataURL(file)
+  showToast('Foto seleccionada')
+}
+
+// ========== UTILS ==========
+function formatDate(dateStr) {
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const d = new Date(dateStr+'T12:00:00')
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+</script>
+
+<!-- POPUP CAMBIAR CONTRASEÑA -->
+<div class="popup-overlay" id="popup-password">
+  <div class="popup-box">
+    <div class="popup-title">Cambiar contraseña</div>
+    <p class="popup-msg">Ingresa tu correo y te enviaremos un enlace para cambiar tu contraseña.</p>
+    <div class="form-group">
+      <input type="email" class="form-input" id="reset-email" placeholder="tu@correo.com">
+    </div>
+    <div class="popup-actions">
+      <button class="btn-next" onclick="enviarResetPassword()" style="flex:1;">Enviar enlace</button>
+      <button class="btn-popup-back" onclick="document.getElementById('popup-password').classList.remove('open')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PERFIL -->
+<div class="modal-overlay" id="modal-editar-perfil" onclick="if(event.target===this)cerrarEditarPerfil()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title-bar">
+      <h2 class="modal-title">Editar perfil</h2>
+      <button class="modal-close" onclick="cerrarEditarPerfil()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="text-align:center;margin-bottom:20px;">
+        <div id="edit-avatar" onclick="document.getElementById('avatar-input').click()" style="width:80px;height:80px;border-radius:50%;background:var(--accent);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:28px;color:white;cursor:pointer;">M</div>
+        <div style="font-size:12px;color:var(--text3);">Toca para cambiar foto</div>
+        <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="cambiarFoto(this)">
+      </div>
+      <div class="form-group"><label class="form-label">Nombre de usuario</label><input type="text" class="form-input" id="edit-usuario" placeholder="@usuario" oninput="autoAt(this)"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" id="edit-nombre" placeholder="Tu nombre"></div>
+        <div class="form-group"><label class="form-label">Apellido paterno</label><input type="text" class="form-input" id="edit-apaterno" placeholder="Apellido"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Apellido materno</label><input type="text" class="form-input" id="edit-amaterno" placeholder="Apellido materno"></div>
+      <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" class="form-input" id="edit-telefono" placeholder="55 0000 0000"></div>
+      <div class="form-group"><label class="form-label">Correo electrónico</label><input type="email" class="form-input" id="edit-correo" placeholder="tu@correo.com"></div>
+      <button onclick="guardarPerfil()" class="btn-next" style="width:100%;margin-top:8px;">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
